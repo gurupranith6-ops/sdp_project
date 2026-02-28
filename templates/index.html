@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Study Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Study Planner</h1>
+
+    <form method="POST">
+        <label>Enter Subjects (comma separated)</label>
+        <input type="text" name="subjects" placeholder="e.g. Aptitude, Python" required>
+
+        <label>Study Hours Per Day</label>
+        <input type="number" name="hours" min="1" required>
+
+        <label>Number of Exam Days</label>
+        <input type="number" name="days" min="1" required>
+
+        <button type="submit">Generate Study Plan</button>
+    </form>
+
+    {% if study_plan %}
+    <div class="result">
+        <h2>Your Study Plan</h2>
+        <table>
+            {% for line in study_plan.split('\n') %}
+                {% if loop.index == 1 %}
+                    <tr>
+                        {% for col in line.split('|') %}
+                            <th>{{ col.strip() }}</th>
+                        {% endfor %}
+                    </tr>
+                {% else %}
+                    <tr>
+                        {% for col in line.split('|') %}
+                            <td>{{ col.strip() }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
