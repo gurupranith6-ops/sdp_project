@@ -2,25 +2,19 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+
 def generate_study_plan(subjects, hours_per_day, exam_days):
-    if not subjects or not hours_per_day or not exam_days:
-        return "Please fill all fields properly."
+    """
+    Mock Study Plan Generator with Fair Hour Distribution
+    """
 
-    try:
-        hours_per_day = int(hours_per_day)
-        exam_days = int(exam_days)
-    except ValueError:
-        return "Hours and days must be valid numbers."
+    if isinstance(subjects, str):
+        subjects = [s.strip() for s in subjects.split(",") if s.strip()]
 
-    if hours_per_day <= 0 or exam_days <= 0:
-        return "Hours and days must be greater than 0."
-
-    subjects = [s.strip() for s in subjects.split(",") if s.strip()]
-    if not subjects:
-        return "Please enter at least one subject."
+    hours_per_day = int(hours_per_day)
+    exam_days = int(exam_days)
 
     subject_count = len(subjects)
-
     plan_lines = []
     plan_lines.append("Day | Subject | Topics | Duration")
 
@@ -28,37 +22,33 @@ def generate_study_plan(subjects, hours_per_day, exam_days):
 
     for day in range(1, exam_days + 1):
 
-        # ---- Equal Distribution Logic ----
         base_hours = hours_per_day // subject_count
-        extra_hours = hours_per_day % subject_count
-
-        # Rotate extra hour fairly across days
+        remainder = hours_per_day % subject_count
         start_index = (day - 1) % subject_count
 
-        daily_allocation = [base_hours] * subject_count
+        daily_distribution = {subject: base_hours for subject in subjects}
 
-        for i in range(extra_hours):
-            daily_allocation[(start_index + i) % subject_count] += 1
+        for i in range(remainder):
+            subject_index = (start_index + i) % subject_count
+            daily_distribution[subjects[subject_index]] += 1
 
-        # ---- Last Day → Full Revision ----
+        # Last Day → Full Revision + Mock Test
         if day == exam_days:
-            for idx, subject in enumerate(subjects):
-                for _ in range(daily_allocation[idx]):
-                    plan_lines.append(
-                        f"Day {day} | {subject} | Full Revision + Mock Test | 1 hr"
-                    )
+            for subject in subjects:
+                for _ in range(daily_distribution[subject]):
+                    topic = "Full Revision + Mock Test"
+                    plan_lines.append(f"Day {day} | {subject} | {topic} | 1 hr")
             continue
 
-        # ---- Every 3rd Day → Revision ----
+        # Every 3rd Day → Revision
         if day % 3 == 0:
-            for idx, subject in enumerate(subjects):
-                for _ in range(daily_allocation[idx]):
-                    plan_lines.append(
-                        f"Day {day} | {subject} | Revision + Practice Set | 1 hr"
-                    )
+            for subject in subjects:
+                for _ in range(daily_distribution[subject]):
+                    topic = "Revision + Practice Set"
+                    plan_lines.append(f"Day {day} | {subject} | {topic} | 1 hr")
             continue
 
-        # ---- Normal Study Day ----
+        # Gradual Difficulty
         if day <= exam_days // 3:
             difficulty = difficulty_levels[0]
         elif day <= (2 * exam_days) // 3:
@@ -66,12 +56,10 @@ def generate_study_plan(subjects, hours_per_day, exam_days):
         else:
             difficulty = difficulty_levels[2]
 
-        for idx, subject in enumerate(subjects):
-            for _ in range(daily_allocation[idx]):
+        for subject in subjects:
+            for _ in range(daily_distribution[subject]):
                 topic = f"{difficulty} Concepts + Practice"
-                plan_lines.append(
-                    f"Day {day} | {subject} | {topic} | 1 hr"
-                )
+                plan_lines.append(f"Day {day} | {subject} | {topic} | 1 hr")
 
     return "\n".join(plan_lines)
 
@@ -79,15 +67,30 @@ def generate_study_plan(subjects, hours_per_day, exam_days):
 @app.route("/", methods=["GET", "POST"])
 def index():
     study_plan = None
+    error = None
 
     if request.method == "POST":
-        subjects = request.form.get("subjects")
-        hours = request.form.get("hours")
-        days = request.form.get("days")
+        subjects = request.form.get("subjects", "").strip()
+        hours = request.form.get("hours", "").strip()
+        days = request.form.get("days", "").strip()
 
-        study_plan = generate_study_plan(subjects, hours, days)
+        # Basic validation
+        if not subjects:
+            error = "Please enter at least one subject."
+        elif not hours.isdigit() or not days.isdigit():
+            error = "Study hours and exam days must be positive whole numbers."
+        else:
+            hours = int(hours)
+            days = int(days)
 
-    return render_template("index.html", study_plan=study_plan)
+            if hours < 1 or hours > 24:
+                error = "Study hours per day must be between 1 and 24."
+            elif days < 1 or days > 365:
+                error = "Exam days must be between 1 and 365."
+            else:
+                study_plan = generate_study_plan(subjects, hours, days)
+
+    return render_template("index.html", study_plan=study_plan, error=error)
 
 
 if __name__ == "__main__":

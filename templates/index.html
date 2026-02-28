@@ -9,7 +9,11 @@
 
 <div class="container">
     <h1>AI Study Planner</h1>
-
+     {% if error %}
+<div class="error-message">
+    {{ error }}
+</div>
+{% endif %}
     <form method="POST">
         <label>Enter Subjects (comma separated)</label>
         <input type="text" name="subjects" placeholder="e.g. Aptitude, Python" required>
